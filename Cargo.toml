@@ -1,0 +1,7 @@
+[package]
+name = "sockle"
+version = "0.1.0"
+edition = "2021"
+description = "Lightweight wrapper around tungenstenite crate"
+
+[dependencies]
