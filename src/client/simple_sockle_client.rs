@@ -1,12 +1,12 @@
 use super::*;
 use tungstenite::{stream::MaybeTlsStream, Error};
 
-pub struct SimpleSockle
+pub struct SimpleSockleClient
 {
     pub(crate) socket: Option<tungstenite::WebSocket<MaybeTlsStream<std::net::TcpStream>>>
 }
 
-impl Default for SimpleSockle
+impl Default for SimpleSockleClient
 {
     fn default() -> Self
     {
@@ -14,7 +14,7 @@ impl Default for SimpleSockle
     }
 }
 
-impl SimpleSockle
+impl SimpleSockleClient
 {
     pub fn new() -> Self
     {
@@ -125,7 +125,8 @@ impl SimpleSockle
         let socket = self.socket.as_mut().unwrap();
         loop
         {
-            match socket.read_message().map_err(SimpleSockle::map_error)?
+            match socket.read_message()
+                        .map_err(SimpleSockleClient::map_error)?
             {
                 Message::Text(t) => return Ok(t),
                 Message::Binary(_) =>

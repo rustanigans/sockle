@@ -8,9 +8,9 @@ pub enum SimpleSockleError
     #[error("Attempted connect on open socket")]
     SocketConnected,
     #[error("Error on underlying socket: {0}")]
-    SocketError(Error),
+    SocketError(tungstenite::Error),
     #[error("IO Error on underlying socket: {0}")]
     IoError(std::io::Error),
     #[error("Timeout while trying to close socket")]
-    SocketCloseTimeout,
+    SocketCloseTimeout
 }

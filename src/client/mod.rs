@@ -3,10 +3,10 @@ use std::time::Duration;
 use tungstenite::{protocol::CloseFrame, Message};
 use url::Url;
 
-mod simple_sockle;
+mod simple_sockle_client;
 
 use crate::SimpleSockleError;
-pub use simple_sockle::SimpleSockle;
+pub use simple_sockle_client::SimpleSockleClient;
 
 pub trait SockleClient
 {
@@ -27,7 +27,7 @@ pub trait SockleClient
     fn close(&mut self) -> Result<()>;
 }
 
-impl SockleClient for SimpleSockle
+impl SockleClient for SimpleSockleClient
 {
     fn connect(&mut self, url: &str) -> Result<()>
     {
@@ -40,7 +40,7 @@ impl SockleClient for SimpleSockle
 
         let url = Url::parse(url).map_err(|e| SimpleSockleError::InvalidUrl(e.to_string()))?;
 
-        let socket = tungstenite::connect(url).map_err(SimpleSockle::map_error)?
+        let socket = tungstenite::connect(url).map_err(SimpleSockleClient::map_error)?
                                               .0;
         self.socket = Some(socket);
 
@@ -55,7 +55,7 @@ impl SockleClient for SimpleSockle
                .as_mut()
                .unwrap()
                .write_message(Message::Text(msg))
-               .map_err(SimpleSockle::map_error)?)
+               .map_err(SimpleSockleClient::map_error)?)
     }
 
     fn try_read(&mut self) -> Result<Option<String>>
