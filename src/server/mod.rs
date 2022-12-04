@@ -20,6 +20,9 @@ pub trait SockleServer
 
     /// Closes all connections and stops listening
     fn shutdown(&self) -> Result<()>;
+
+    /// Number of client connections
+    fn connection_count(&self) -> usize;
 }
 
 pub enum SockleServerMessage
@@ -109,6 +112,7 @@ impl Conn
             {
                 Ok(SockleServerMessage::Send(msg)) =>
                 {
+                    log::debug!("Received Send ctrl message on socket, writing to client");
                     if let Err(e) = self.socket.write_message(Message::Text(msg))
                     {
                         log::error!("Unable to write broadcast to socket: {e}");
@@ -117,6 +121,7 @@ impl Conn
                 }
                 Ok(SockleServerMessage::Shutdown) =>
                 {
+                    log::info!("Shutting down, closing a client socket");
                     self.close_socket(Some(CloseFrame { code:   CloseCode::Normal,
                                                         reason: "Server Shutdown".into() }));
                     return;
@@ -210,7 +215,7 @@ impl SockleServer for SimpleSockleServer
         let senders = self.thread_senders.clone();
         let (thread_ctrl_s, thread_ctrl_r) = std::sync::mpsc::channel();
         self.thread_ctrl = Some(thread_ctrl_s);
-        std::thread::spawn(move || {
+        std::thread::Builder::new().name("Sockle Server Connection Listener".to_string()).spawn(move || {
             for stream in server.incoming()
             {
                 match stream
@@ -219,7 +224,7 @@ impl SockleServer for SimpleSockleServer
                     {
                         let on_message_t = on_message.clone();
                         let senders2 = senders.clone();
-                        std::thread::spawn(move || {
+                        std::thread::Builder::new().name("Sockle Server Client Connection".to_string()).spawn(move || {
                             match tungstenite::accept(s)
                             {
                                 Ok(socket) =>
@@ -237,23 +242,27 @@ impl SockleServer for SimpleSockleServer
                                     log::error!("Error accepting incoming stream: {e}");
                                 }
                             }
-                        });
+                        }).unwrap();
                     }
                     Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock =>
                     {
-                        std::thread::sleep(Duration::from_millis(100));
+                        std::thread::sleep(Duration::from_millis(15));
                     }
                     Err(e) =>
                     {
                         log::error!("Error opening incoming stream: {e}");
                     }
                 }
-                if thread_ctrl_r.try_recv().is_ok()
+
+                if matches!(thread_ctrl_r.try_recv(), Err(TryRecvError::Disconnected) | Ok(_))
                 {
-                    log::info!("Server shutdown requested, ending listen thread");
+                    log::debug!("Server shutdown requested, ending listen thread");
+                    break;
                 }
+
             }
-        });
+            log::info!("Sockle server has shutdown");
+        })?;
         Ok(())
     }
 
@@ -271,12 +280,22 @@ impl SockleServer for SimpleSockleServer
         {
             let _ = s.send(SockleServerMessage::Shutdown);
         }
-        if let Err(e) = self.thread_ctrl.as_ref().unwrap().send(())
+        let tc = self.thread_ctrl.as_ref().unwrap();
+        if let Err(e) = tc.send(())
         {
             let err = format!("Unable to signal listen thread to end: {e}");
             log::error!("{err}");
             anyhow::bail!(err);
         }
+        while let Ok(_) = tc.send(())
+        {
+            std::thread::yield_now();
+        }
         Ok(())
+    }
+
+    fn connection_count(&self) -> usize
+    {
+        self.thread_senders.lock().unwrap().len()
     }
 }
