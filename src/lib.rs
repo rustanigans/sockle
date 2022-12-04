@@ -30,6 +30,26 @@ mod tests
     }
 
     #[test]
+    fn ping()
+    {
+        let _ = pretty_env_logger::try_init();
+        let mut s = SimpleSockleClient::new();
+        let mut server = SimpleSockleServer::new();
+        let addr = listen_addr();
+        server.listen(&addr.0, |_, _| Ok(())).unwrap();
+
+        s.connect(&addr.1).expect("Connect");
+
+        wait_for_connections(&server, 1);
+
+        assert!(s.ping().is_ok());
+
+        s.read_timeout(Duration::from_millis(15)).unwrap();
+
+        server.shutdown().unwrap();
+    }
+
+    #[test]
     fn when_no_data_try_read_should_return_none()
     {
         let _ = pretty_env_logger::try_init();

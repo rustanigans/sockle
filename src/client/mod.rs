@@ -25,6 +25,8 @@ pub trait SockleClient
     fn read_timeout(&mut self, timeout: Duration) -> Result<Option<String>>;
     /// Closes the socket connection, returns Ok(()) if already closed
     fn close(&mut self) -> Result<()>;
+    /// Sends a ping
+    fn ping(&mut self) -> Result<()>;
 }
 
 impl SockleClient for SimpleSockleClient
@@ -104,5 +106,15 @@ impl SockleClient for SimpleSockleClient
         log::info!("Socket Closed");
 
         Ok(result)
+    }
+
+    fn ping(&mut self) -> Result<()>
+    {
+        self.error_if_closed()?;
+        self.socket
+            .as_mut()
+            .unwrap()
+            .write_message(Message::Ping(vec![0]))?;
+        Ok(())
     }
 }
