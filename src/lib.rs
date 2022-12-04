@@ -2,7 +2,7 @@ mod client;
 pub use client::*;
 
 mod server;
-pub use server::*;
+pub use server::{SimpleSockleServer, SockleServer};
 
 mod error;
 pub use error::SimpleSockleError;

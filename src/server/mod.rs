@@ -19,6 +19,8 @@ pub trait SockleServer
     fn send(&self, msg: String);
 
     /// Closes all connections and stops listening
+    ///
+    /// Blocks until thread has ended
     fn shutdown(&self) -> Result<()>;
 
     /// Number of client connections
