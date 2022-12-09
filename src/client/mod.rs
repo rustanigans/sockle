@@ -67,7 +67,10 @@ impl SockleClient for SimpleSockleClient
 
         let result = self.read_and_wrap_by_error_kind(|x| x == std::io::ErrorKind::WouldBlock);
 
-        self.set_non_blocking(false)?;
+        if result.is_ok()
+        {
+            self.set_non_blocking(false)?;
+        }
         Ok(result?)
     }
 
@@ -86,8 +89,10 @@ impl SockleClient for SimpleSockleClient
         // Unix returns WouldBlock, windows returns TimedOut
         use std::io::ErrorKind::{TimedOut, WouldBlock};
         let result = self.read_and_wrap_by_error_kind(|x| matches!(x, WouldBlock | TimedOut));
-
-        self.set_timeout(None)?;
+        if result.is_ok()
+        {
+            self.set_timeout(None)?;
+        }
         Ok(result?)
     }
 
