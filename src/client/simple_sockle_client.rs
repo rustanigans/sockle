@@ -90,7 +90,7 @@ impl SimpleSockleClient
         }
 
         log::debug!("Writing pending message until socket closed");
-        let timeout = Instant::now() + Duration::from_secs(10);
+        let timeout = Instant::now() + Duration::from_secs(2);
         while !socket.write_pending().is_err() && timeout > Instant::now()
         {
             std::thread::yield_now();
